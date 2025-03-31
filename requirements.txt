@@ -1,0 +1,23 @@
+# Framework web
+fastapi==0.103.1
+uvicorn==0.23.2
+pydantic==2.4.2
+pydantic-settings==0.1.0
+
+# Procesamiento de lenguaje natural
+langchain==0.0.312
+openai==1.1.1
+
+# Utilidades
+python-dotenv==1.0.0
+python-multipart==0.0.6
+tenacity==8.2.3
+loguru==0.7.2
+
+# Testing
+pytest==7.4.2
+httpx==0.25.0
+
+# Documentación
+mkdocs==1.5.3
+mkdocs-material==9.4.2
