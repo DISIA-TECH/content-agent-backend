@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
-from langchain.schema import SystemMessage, HumanMessage
-from core.config import settings
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import SystemMessage, HumanMessage
+import os
+
+# Corregir el import para usar el formato con guion
+from langchain_openai import ChatOpenAI
 
 class BaseAgent(ABC):
     """Clase base abstracta para todos los agentes de generación de contenido."""
@@ -16,13 +18,9 @@ class BaseAgent(ABC):
             model_name: Nombre del modelo LLM a utilizar
             temperature: Parámetro de creatividad para el LLM (0.0-1.0)
         """
-        # Versión actualizada para OpenAI 1.x
-        self.llm = ChatOpenAI(
-            model=model_name,  # Cambiado de model_name a model
-            temperature=temperature,
-            api_key=settings.OPENAI_API_KEY
-        )
-        
+        self.llm = ChatOpenAI(model=model_name, temperature=temperature)
+        self.output_parser = StrOutputParser()
+    
     @abstractmethod
     def _get_prompt_data(self) -> Dict[str, str]:
         """Obtiene los datos de prompt específicos para este agente.
@@ -32,16 +30,14 @@ class BaseAgent(ABC):
         """
         pass
     
-    def generate_content(self, tema: str, comentarios_adicionales: str, **kwargs) -> Dict[str, str]:
-        """Genera contenido basado en el tema y comentarios proporcionados.
+    def generate_content(self, **kwargs) -> Dict[str, Any]:
+        """Genera contenido basado en los parámetros proporcionados.
         
         Args:
-            tema: Tema principal para la generación de contenido
-            comentarios_adicionales: Contexto o requisitos adicionales
-            **kwargs: Parámetros adicionales específicos del agente
+            **kwargs: Parámetros específicos del agente
             
         Returns:
-            Diccionario con las partes del contenido generado
+            Diccionario con el contenido generado
         """
         # Obtener datos de prompt específicos del agente
         prompt_data = self._get_prompt_data()
@@ -49,28 +45,24 @@ class BaseAgent(ABC):
         # Crear el prompt
         prompt = ChatPromptTemplate.from_messages([
             SystemMessage(content=prompt_data["system_message"]),
-            HumanMessage(content=prompt_data["human_template"].format(
-                tema=tema,
-                comentarios_adicionales=comentarios_adicionales,
-                **kwargs
-            ))
+            HumanMessage(content=prompt_data["human_template"].format(**kwargs))
         ])
         
         # Ejecutar la cadena
-        chain = LLMChain(llm=self.llm, prompt=prompt)
-        response = chain.run({})
+        chain = prompt | self.llm | self.output_parser
+        response = chain.invoke({})
         
         # Formatear y devolver la respuesta
         return self._format_response(response)
     
-    def _format_response(self, raw_content: str) -> Dict[str, str]:
-        """Formatea el contenido bruto en secciones estructuradas.
+    @abstractmethod
+    def _format_response(self, raw_content: str) -> Dict[str, Any]:
+        """Formatea el contenido bruto en el formato deseado.
         
         Args:
             raw_content: Texto bruto del LLM
             
         Returns:
-            Diccionario con hook, context, body, cta y contenido completo
+            Diccionario con el contenido formateado
         """
-        from common.utils.text_processor import TextProcessor
-        return TextProcessor.extract_content_sections(raw_content)
+        pass

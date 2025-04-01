@@ -1,80 +1,66 @@
 import re
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Any
 
 class TextProcessor:
     """Utilidades para procesamiento de texto en la generación de contenido."""
     
     @staticmethod
-    def split_into_sections(text: str, separator: str = '\n\n') -> List[str]:
-        """Divide un texto en secciones basadas en un separador."""
-        return text.split(separator)
-    
-    @staticmethod
-    def extract_content_sections(text: str) -> Dict[str, str]:
-        """Extrae las secciones de contenido (hook, contexto, cuerpo, CTA)."""
-        sections = text.split('\n\n')
-        hook = sections[0] if len(sections) > 0 else ""
-        context = sections[1] if len(sections) > 1 else ""
-        body = '\n\n'.join(sections[2:-1]) if len(sections) > 3 else sections[2] if len(sections) > 2 else ""
-        cta = sections[-1] if len(sections) > 2 else ""
+    def extract_sections(content: str) -> Dict[str, str]:
+        """Extrae secciones de un artículo en formato markdown."""
+        # Extraer título
+        title_match = re.search(r'^# (.+)$', content, re.MULTILINE)
+        title = title_match.group(1) if title_match else ""
+        
+        # Extraer secciones
+        sections_pattern = r'^## (.+?)\n(.*?)(?=^## |\Z)'
+        sections_matches = re.finditer(sections_pattern, content, re.MULTILINE | re.DOTALL)
+        
+        sections = {}
+        for match in sections_matches:
+            section_title = match.group(1).strip()
+            section_content = match.group(2).strip()
+            sections[section_title.lower()] = section_content
+        
+        # Extraer introducción (texto antes de la primera sección)
+        intro_pattern = r'^# .+?\n\n(.*?)(?=^## |\Z)'
+        intro_match = re.search(intro_pattern, content, re.MULTILINE | re.DOTALL)
+        introduction = intro_match.group(1).strip() if intro_match else ""
         
         return {
-            "hook": hook,
-            "context": context,
-            "body": body,
-            "cta": cta,
-            "content": text
+            "title": title,
+            "introduction": introduction,
+            "sections": sections,
+            "content": content
         }
     
     @staticmethod
-    def extract_bullet_points(text: str) -> List[str]:
-        """Extrae puntos de una lista con viñetas."""
-        bullet_pattern = r'(?:^|\n)(?:[-•*]|\d+[.)])\s+(.*?)(?=(?:\n(?:[-•*]|\d+[.)])|$))'
-        matches = re.findall(bullet_pattern, text, re.DOTALL)
-        return [match.strip() for match in matches]
-    
-    @staticmethod
-    def add_emojis(text: str, emoji_map: Dict[str, str]) -> str:
-        """Añade emojis a un texto basado en palabras clave."""
-        result = text
-        for keyword, emoji in emoji_map.items():
-            if keyword in result.lower():
-                pattern = fr'(?<!\S)({re.escape(keyword)})(?!\S)'
-                replacement = f'{emoji} \\1'
-                result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
-        return result
-    
-    @staticmethod
-    def optimize_for_social_media(text: str, platform: str = "linkedin") -> str:
-        """Optimiza el texto para plataformas de redes sociales."""
-        # Asegurar espaciado adecuado entre párrafos
-        text = re.sub(r'\n{3,}', '\n\n', text)
+    def extract_summary(content: str, max_length: int = 250) -> str:
+        """Extrae un resumen breve del artículo."""
+        # Intentar encontrar la introducción
+        intro_section = None
+        sections = TextProcessor.extract_sections(content)
         
-        # Optimizaciones específicas por plataforma
-        if platform.lower() == "linkedin":
-            # Limitar longitud (LinkedIn tiene un límite de ~3000 caracteres)
-            if len(text) > 2800:
-                sections = TextProcessor.split_into_sections(text)
-                # Acortar el cuerpo manteniendo hook, contexto y CTA
-                if len(sections) > 3:
-                    body_sections = sections[2:-1]
-                    while len('\n\n'.join([sections[0], sections[1], '\n\n'.join(body_sections), sections[-1]])) > 2800 and body_sections:
-                        body_sections.pop()
-                    
-                    text = '\n\n'.join([sections[0], sections[1], '\n\n'.join(body_sections), sections[-1]])
-            
-            # Asegurar que hay hashtags relevantes al final
-            if not re.search(r'#\w+', text):
-                text += "\n\n#contenido #linkedin #profesional"
+        # Buscar sección de introducción
+        for key, value in sections["sections"].items():
+            if "introduc" in key.lower():
+                intro_section = value
+                break
         
-        elif platform.lower() == "blog":
-            # Para blogs, asegurar que los párrafos no sean demasiado largos
-            paragraphs = text.split('\n\n')
-            for i, paragraph in enumerate(paragraphs):
-                if len(paragraph) > 500 and '\n' not in paragraph:
-                    # Dividir párrafos muy largos
-                    sentences = re.split(r'(?<=[.!?])\s+', paragraph)
-                    mid = len(sentences) // 2
-                    paragraphs[i] = '. '.join(sentences[:mid]) + '.\n\n' + '. '.join(sentences[mid:])
-            
-            text = '\n\n'.join(paragraphs)
+        # Si no hay introducción, usar el primer párrafo después del título
+        if not intro_section and sections["introduction"]:
+            intro_section = sections["introduction"]
+        
+        # Si aún no tenemos resumen, usar las primeras líneas del contenido
+        if not intro_section:
+            content_without_title = re.sub(r'^# .+?\n\n', '', content, flags=re.MULTILINE)
+            paragraphs = content_without_title.split('\n\n')
+            if paragraphs:
+                intro_section = paragraphs[0]
+        
+        # Si tenemos un resumen, acortarlo si es necesario
+        if intro_section:
+            if len(intro_section) > max_length:
+                intro_section = intro_section[:max_length].rsplit(' ', 1)[0] + "..."
+            return intro_section.strip()
+        
+        return "Resumen no disponible."

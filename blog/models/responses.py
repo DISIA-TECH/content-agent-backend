@@ -1,16 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-class BlogSection(BaseModel):
-    """Sección de un blog."""
-    title: str = Field(..., description="Título de la sección")
-    content: str = Field(..., description="Contenido de la sección")
-
-class BlogContentResponse(BaseModel):
-    """Respuesta para contenido de blog generado."""
-    content: str = Field(..., description="Contenido completo del blog")
-    title: str = Field(..., description="Título del blog")
-    introduction: str = Field(..., description="Introducción del blog")
-    sections: List[BlogSection] = Field(..., description="Secciones del blog")
-    conclusion: str = Field(..., description="Conclusión del blog")
+class BlogResponse(BaseModel):
+    """Modelo para respuestas de generación de blog."""
+    content: str = Field(..., description="Contenido completo del artículo en formato markdown")
+    title: str = Field(..., description="Título del artículo")
+    summary: str = Field(..., description="Resumen del artículo")
+    sections: List[Dict[str, Any]] = Field(..., description="Estructura de secciones del artículo")
     metadata: Optional[Dict[str, Any]] = Field({}, description="Metadatos adicionales")
