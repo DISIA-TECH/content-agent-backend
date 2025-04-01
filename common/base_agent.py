@@ -4,6 +4,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
 from langchain.schema import SystemMessage, HumanMessage
+from core.config import settings
 
 class BaseAgent(ABC):
     """Clase base abstracta para todos los agentes de generación de contenido."""
@@ -15,8 +16,13 @@ class BaseAgent(ABC):
             model_name: Nombre del modelo LLM a utilizar
             temperature: Parámetro de creatividad para el LLM (0.0-1.0)
         """
-        self.llm = ChatOpenAI(model_name=model_name, temperature=temperature)
-    
+        # Versión actualizada para OpenAI 1.x
+        self.llm = ChatOpenAI(
+            model=model_name,  # Cambiado de model_name a model
+            temperature=temperature,
+            api_key=settings.OPENAI_API_KEY
+        )
+        
     @abstractmethod
     def _get_prompt_data(self) -> Dict[str, str]:
         """Obtiene los datos de prompt específicos para este agente.
