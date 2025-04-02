@@ -11,14 +11,24 @@ from langchain_openai import ChatOpenAI
 class BaseAgent(ABC):
     """Clase base abstracta para todos los agentes de generación de contenido."""
     
-    def __init__(self, model_name: str = "gpt-4o", temperature: float = 0.7):
-        """Inicializa el agente base con un modelo de lenguaje.
+    def __init__(self, model_name: str = "gpt-4o", temperature: float = 0.7, **kwargs):
+        """Inicializa el agente base con un modelo de lenguaje y parámetros.
         
         Args:
             model_name: Nombre del modelo LLM a utilizar
             temperature: Parámetro de creatividad para el LLM (0.0-1.0)
+            **kwargs: Parámetros adicionales para el modelo
         """
-        self.llm = ChatOpenAI(model=model_name, temperature=temperature)
+        self.llm = ChatOpenAI(
+            model=model_name, 
+            temperature=temperature,
+            top_p=kwargs.get('top_p', 1.0),
+            max_tokens=kwargs.get('max_tokens'),
+            presence_penalty=kwargs.get('presence_penalty', 0.0),
+            frequency_penalty=kwargs.get('frequency_penalty', 0.0),
+            stop=kwargs.get('stop'),
+            seed=kwargs.get('seed')
+        )
         self.output_parser = StrOutputParser()
     
     @abstractmethod

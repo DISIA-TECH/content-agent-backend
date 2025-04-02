@@ -27,7 +27,8 @@ class BlogOrchestrator:
                              longitud: str, 
                              estilos: List[str], 
                              urls: Optional[List[str]] = None, 
-                             prompt_personalizado: Optional[str] = None) -> Dict[str, Any]:
+                             prompt_personalizado: Optional[str] = None,
+                             parametros: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Genera contenido de blog completo.
         
         Args:
@@ -40,6 +41,18 @@ class BlogOrchestrator:
         Returns:
             Diccionario con el contenido generado
         """
+        
+        # Configurar parámetros del modelo
+        model_params = parametros or {}
+        model_name = model_params.get('model', "gpt-4o")
+        
+        # Inicializar agentes con los parámetros proporcionados
+        if parametros:
+            self.outline_planner = OutlinePlannerAgent(model_name=model_name, **model_params)
+            self.content_writer = ContentWriterAgent(model_name=model_name, **model_params)
+            self.style_editor = StyleCoherenceEditorAgent(model_name=model_name, **model_params)
+            self.web_researcher = WebResearchAgent(model_name=model_name)
+            
         # Realizar investigación web si se proporcionan URLs
         url_research = ""
         if urls and len(urls) > 0:
