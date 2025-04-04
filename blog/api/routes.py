@@ -45,14 +45,16 @@ async def generate_blog(request: BlogRequest):
             longitud=request.longitud,
             estilos=request.estilos,
             urls=request.urls,
-            prompt_personalizado=request.prompt_personalizado
+            prompt_personalizado=request.prompt_personalizado,
+            parametros=request.parametros
         )
         
         return BlogResponse(
             content=result["content"],
             title=result["title"],
             summary=result["summary"],
-            sections=result["sections"]
+            sections=result["sections"],
+            metadata=result["metadata"],
         )
     except ValueError as e:
         logger.error(f"Error de validación: {str(e)}")
